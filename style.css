@@ -1,277 +1,394 @@
-const $ = (id) => document.getElementById(id);
-
-const output = $("passwordOutput");
-const lengthSlider = $("lengthSlider");
-const lengthValue = $("lengthValue");
-const generateBtn = $("generateBtn");
-const refreshBtn = $("refreshBtn");
-const copyBtn = $("copyBtn");
-const copyFeedback = $("copyFeedback");
-const historyEl = $("history");
-const toast = $("toast");
-
-let mode = "random";
-let context = "geral";
-let history = [];
-
-const contexts = {
-  geral: {
-    title: "Proteção equilibrada",
-    text: "Use uma senha única e longa. Para contas importantes, combine com autenticação em dois fatores."
-  },
-  instagram: {
-    title: "Conta social",
-    text: "Prefira uma senha única e ative a autenticação em dois fatores para proteger o acesso."
-  },
-  email: {
-    title: "Proteção reforçada",
-    text: "Seu e-mail pode ser usado para recuperar outras contas. Prefira uma senha longa e exclusiva."
-  },
-  wifi: {
-    title: "Longa e compartilhável",
-    text: "Uma passphrase longa pode ser forte e mais fácil de informar para pessoas autorizadas."
-  },
-  banco: {
-    title: "Proteção máxima",
-    text: "Nunca reutilize a senha de uma conta financeira. Use uma senha única e siga as exigências do banco."
-  },
-  trabalho: {
-    title: "Senha corporativa",
-    text: "Siga as regras da sua organização e evite reutilizar senhas pessoais."
-  }
-};
-
-const words = [
-  "Cacto","Lua","Nuvem","Rio","Sol","Lobo","Pérola","Verde","Café","Brisa",
-  "Fogo","Mar","Vento","Estrela","Cedro","Aurora","Jardim","Montanha","Azul","Prata",
-  "Duna","Oliva","Chuva","Rosa","Vale","Lago","Coral","Falcão","Neve","Horizonte"
-];
-
-const sets = {
-  uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  lowercase: "abcdefghijklmnopqrstuvwxyz",
-  numbers: "0123456789",
-  symbols: "!@#$%&*+-=?_"
-};
-
-function secureRandomInt(max) {
-  const array = new Uint32Array(1);
-  crypto.getRandomValues(array);
-  return array[0] % max;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-function randomChar(chars) {
-  return chars[secureRandomInt(chars.length)];
+:root {
+  --bg: #07090d;
+  --card: rgba(16, 20, 28, .86);
+  --border: rgba(255,255,255,.09);
+  --text: #f5f7fb;
+  --muted: #9299a8;
+  --accent: #72f5a5;
+  --accent-2: #58d8ff;
+  --danger: #ff6b7d;
+  --shadow: 0 24px 70px rgba(0,0,0,.35);
 }
 
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = secureRandomInt(i + 1);
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
+body {
+  min-height: 100vh;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% -10%, #172033 0, transparent 35%),
+    var(--bg);
+  overflow-x: hidden;
 }
 
-function generateRandomPassword(length) {
-  let selected = "";
-  const required = [];
+button, input { font: inherit; }
+button { cursor: pointer; }
 
-  if ($("uppercase").checked) { selected += sets.uppercase; required.push(randomChar(sets.uppercase)); }
-  if ($("lowercase").checked) { selected += sets.lowercase; required.push(randomChar(sets.lowercase)); }
-  if ($("numbers").checked) { selected += sets.numbers; required.push(randomChar(sets.numbers)); }
-  if ($("symbols").checked) { selected += sets.symbols; required.push(randomChar(sets.symbols)); }
+.background-glow {
+  position: fixed;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: .10;
+  pointer-events: none;
+}
+.glow-one { background: var(--accent); top: 25%; left: -250px; }
+.glow-two { background: var(--accent-2); bottom: -200px; right: -180px; }
 
-  if (!selected) {
-    $("lowercase").checked = true;
-    selected = sets.lowercase;
-    required.push(randomChar(sets.lowercase));
-  }
-
-  if ($("similar").checked) {
-    selected = selected.replace(/[O0Il1]/g, "");
-  }
-
-  const result = [...required];
-  while (result.length < length) result.push(randomChar(selected));
-  return shuffle(result).join("");
+.topbar {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-function generateMemorablePassword() {
-  const count = Math.max(3, Math.min(5, Math.floor(Number(lengthSlider.value) / 6)));
-  const chosen = shuffle([...words]).slice(0, count);
-  const separators = ["-", ".", "_"];
-  let result = chosen.join(separators[secureRandomInt(separators.length)]);
+.brand {
+  color: white;
+  text-decoration: none;
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.brand span:last-child span { color: var(--accent); }
+.brand-icon { color: var(--accent); font-size: 14px; }
 
-  const number = String(secureRandomInt(90) + 10);
-  const symbol = randomChar("!@#$%&*");
-
-  result += number + symbol;
-
-  // Approximate requested length while preserving readability.
-  if (result.length < Number(lengthSlider.value)) {
-    result += randomChar("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + randomChar("abcdefghijklmnopqrstuvwxyz");
-  }
-  return result;
+.privacy-badge {
+  color: #aab2c0;
+  font-size: 12px;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,.025);
+}
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 7px;
+  box-shadow: 0 0 10px var(--accent);
 }
 
-function generate() {
-  const password = mode === "random"
-    ? generateRandomPassword(Number(lengthSlider.value))
-    : generateMemorablePassword();
-
-  output.value = password;
-  updateStrength(password);
-  addHistory(password);
+.container { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+.hero { padding: 66px 0 46px; max-width: 720px; }
+.eyebrow, .section-label {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+.hero h1 {
+  margin-top: 13px;
+  font-size: clamp(42px, 6vw, 70px);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+.hero h1 span {
+  color: transparent;
+  background: linear-gradient(90deg, var(--accent), #d9ffe8);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+.hero p {
+  margin-top: 20px;
+  max-width: 610px;
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 15px;
 }
 
-function calculateStrength(password) {
-  let score = 0;
-  const length = password.length;
-
-  score += Math.min(45, length * 2.8);
-  if (/[a-z]/.test(password)) score += 10;
-  if (/[A-Z]/.test(password)) score += 10;
-  if (/\d/.test(password)) score += 10;
-  if (/[^A-Za-z0-9]/.test(password)) score += 15;
-
-  const unique = new Set(password).size;
-  score += Math.min(10, unique / Math.max(1, length) * 10);
-
-  if (/(.)\1\1/.test(password)) score -= 12;
-  if (/1234|abcd|qwerty|password/i.test(password)) score -= 25;
-
-  return Math.max(0, Math.min(100, Math.round(score)));
+.app-grid {
+  display: grid;
+  grid-template-columns: 1.28fr .72fr;
+  gap: 18px;
+  align-items: start;
 }
 
-function updateStrength(password) {
-  const score = calculateStrength(password);
-  const meter = $("meterFill");
-  const label = $("strengthLabel");
-  const number = $("scoreNumber");
-  const icon = $("strengthIcon");
-
-  number.textContent = `${score}/100`;
-  meter.style.width = `${score}%`;
-
-  let color = "var(--danger)";
-  let text = "Fraca";
-  if (score >= 40) { color = "#ffc857"; text = "Moderada"; }
-  if (score >= 70) { color = "#9ce85d"; text = "Forte"; }
-  if (score >= 90) { color = "var(--accent)"; text = "Muito forte"; }
-
-  meter.style.background = color;
-  number.style.color = color;
-  icon.style.color = color;
-  label.textContent = text;
-
-  const checks = [
-    ["Comprimento", `${password.length} caracteres`, password.length >= 14],
-    ["Maiúsculas", /[A-Z]/.test(password) ? "Incluídas" : "Não incluídas", /[A-Z]/.test(password)],
-    ["Números", /\d/.test(password) ? "Incluídos" : "Não incluídos", /\d/.test(password)],
-    ["Símbolos", /[^A-Za-z0-9]/.test(password) ? "Incluídos" : "Não incluídos", /[^A-Za-z0-9]/.test(password)]
-  ];
-
-  $("analysisList").innerHTML = checks.map(([name, value, ok]) =>
-    `<div class="analysis-item"><span>${name}</span><strong class="${ok ? "ok" : ""}">${ok ? "✓ " : ""}${value}</strong></div>`
-  ).join("");
+.card {
+  background: linear-gradient(145deg, rgba(22,27,37,.92), rgba(10,13,19,.92));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
 }
 
-function addHistory(password) {
-  history.unshift({
-    password,
-    time: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-    mode
-  });
-  history = history.slice(0, 5);
-  renderHistory();
+.generator-card { padding: 28px; }
+.card-heading { display: flex; justify-content: space-between; align-items: flex-start; }
+.card-heading h2, .history-heading h2 {
+  margin-top: 5px;
+  font-size: 24px;
+  letter-spacing: -.03em;
+}
+.icon-btn {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.04);
+  color: #dce2eb;
+  border-radius: 11px;
+  width: 40px;
+  height: 40px;
+  font-size: 21px;
+  transition: .2s;
+}
+.icon-btn:hover { transform: rotate(90deg); border-color: rgba(114,245,165,.4); }
+
+.password-box {
+  margin-top: 25px;
+  padding: 7px;
+  display: flex;
+  gap: 8px;
+  background: #080b10;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+}
+.password-box input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  padding: 11px 10px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 14px;
+}
+.copy-btn, .clear-btn {
+  border: 0;
+  border-radius: 9px;
+  background: rgba(114,245,165,.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 14px;
+}
+.feedback { height: 17px; padding: 5px 4px 0; font-size: 11px; color: var(--accent); }
+
+.mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-top: 14px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+}
+.mode {
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #9299a8;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.mode.active { background: rgba(255,255,255,.08); color: white; }
+
+.context-block, .length-control { margin-top: 25px; }
+.control-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #dbe0e8;
+  font-size: 12px;
+  font-weight: 700;
+}
+.hint { color: #707887; font-size: 10px; font-weight: 500; }
+.context-grid {
+  margin-top: 11px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.context {
+  color: #9ca4b2;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.025);
+  padding: 9px 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  transition: .2s;
+}
+.context:hover, .context.active { color: white; border-color: rgba(114,245,165,.45); background: rgba(114,245,165,.07); }
+
+.length-control input {
+  width: 100%;
+  margin-top: 15px;
+  accent-color: var(--accent);
+}
+input[type="range"] { cursor: pointer; }
+
+.options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 14px;
+  margin-top: 22px;
+}
+.check-row {
+  color: #aeb5c2;
+  font-size: 12px;
+  cursor: pointer;
+}
+.check-row.full { grid-column: 1 / -1; }
+.check-row span { display: flex; align-items: center; gap: 9px; }
+.check-row input { display: none; }
+.check-row i {
+  width: 17px; height: 17px;
+  border: 1px solid #414958;
+  border-radius: 5px;
+  position: relative;
+}
+.check-row input:checked + i {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check-row input:checked + i::after {
+  content: "✓";
+  color: #07100b;
+  font-size: 12px;
+  font-weight: 900;
+  position: absolute;
+  left: 3px;
+  top: -1px;
 }
 
-function renderHistory() {
-  if (!history.length) {
-    historyEl.innerHTML = `<div class="empty-history">Suas senhas recentes aparecerão aqui. Elas não são salvas no servidor.</div>`;
-    return;
-  }
+.generate-btn {
+  width: 100%;
+  border: 0;
+  margin-top: 26px;
+  border-radius: 12px;
+  padding: 14px;
+  color: #06100a;
+  background: var(--accent);
+  font-weight: 900;
+  letter-spacing: .08em;
+  transition: transform .18s, box-shadow .18s;
+}
+.generate-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(114,245,165,.16); }
+.generate-btn span { float: right; font-size: 18px; line-height: 12px; }
 
-  historyEl.innerHTML = history.map((item, index) => `
-    <div class="history-item">
-      <span class="history-password">${escapeHtml(item.password)}</span>
-      <span class="history-meta">${item.mode === "memorable" ? "Memorável" : "Aleatória"} · ${item.time}</span>
-      <button class="history-copy" data-index="${index}">Copiar</button>
-    </div>
-  `).join("");
-
-  document.querySelectorAll(".history-copy").forEach(btn => {
-    btn.addEventListener("click", () => copyText(history[Number(btn.dataset.index)].password));
-  });
+.side-column { display: grid; gap: 18px; }
+.strength-card, .recommendation-card, .tips-card { padding: 24px; }
+.compact { align-items: center; }
+.strength-icon {
+  width: 35px; height: 35px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: var(--accent);
+  background: rgba(114,245,165,.09);
+}
+.strength-score { margin-top: 26px; }
+.score-top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.score-top span { color: #dbe2ec; font-weight: 700; }
+.score-top strong { color: var(--accent); font-size: 12px; }
+.meter {
+  height: 7px;
+  background: #202631;
+  border-radius: 99px;
+  margin-top: 11px;
+  overflow: hidden;
+}
+.meter span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width .35s, background .35s;
 }
 
-function escapeHtml(text) {
-  return text.replace(/[&<>"']/g, char => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
-  }[char]));
+.analysis-list { margin-top: 19px; display: grid; gap: 10px; }
+.analysis-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #9ca5b4;
+  font-size: 11px;
+}
+.analysis-item strong { color: #e2e7ee; font-weight: 650; }
+.analysis-item .ok { color: var(--accent); }
+
+.recommendation-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.recommendation-icon {
+  min-width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 11px;
+  background: rgba(88,216,255,.08);
+  color: var(--accent-2);
+}
+.recommendation-card h3 { margin-top: 5px; font-size: 16px; }
+.recommendation-card p { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+.tips-card ul { margin: 14px 0 0 17px; color: #929aa9; font-size: 11px; line-height: 1.9; }
+
+.history-section { margin: 46px 0 60px; }
+.history-heading { display: flex; justify-content: space-between; align-items: end; margin-bottom: 15px; }
+.clear-btn { background: transparent; border: 1px solid var(--border); padding: 8px 11px; color: #858e9e; }
+.history-list { display: grid; gap: 9px; }
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+}
+.history-password { font-family: monospace; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-meta { color: #7f8796; font-size: 10px; white-space: nowrap; }
+.history-copy { border: 0; background: transparent; color: var(--accent); font-size: 11px; font-weight: 700; }
+.empty-history { padding: 25px; border: 1px dashed var(--border); border-radius: 12px; text-align: center; color: #6f7785; font-size: 11px; }
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 25px 0 35px;
+  color: #626b79;
+  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
 }
 
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    copyFeedback.textContent = "Senha copiada para a área de transferência.";
-    showToast("Senha copiada!");
-    setTimeout(() => copyFeedback.textContent = "", 2500);
-  } catch {
-    output.select();
-    document.execCommand("copy");
-    showToast("Senha copiada!");
-  }
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  transform: translateY(30px);
+  opacity: 0;
+  pointer-events: none;
+  background: #eefef4;
+  color: #07120b;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  transition: .25s;
 }
+.toast.show { opacity: 1; transform: translateY(0); }
 
-function updateRecommendation() {
-  const data = contexts[context];
-  $("recommendationTitle").textContent = data.title;
-  $("recommendationText").textContent = data.text;
+@media (max-width: 850px) {
+  .app-grid { grid-template-columns: 1fr; }
+  .hero { padding-top: 40px; }
 }
-
-function showToast(message) {
-  toast.textContent = message;
-  toast.classList.add("show");
-  clearTimeout(window.toastTimer);
-  window.toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+@media (max-width: 560px) {
+  .container, .topbar { width: min(100% - 24px, 1120px); }
+  .generator-card, .strength-card, .recommendation-card, .tips-card { padding: 20px; }
+  .context-grid { grid-template-columns: repeat(2, 1fr); }
+  .options { grid-template-columns: 1fr; }
+  .check-row.full { grid-column: auto; }
+  .hero h1 { font-size: 44px; }
+  footer { flex-direction: column; gap: 8px; }
 }
-
-lengthSlider.addEventListener("input", () => {
-  lengthValue.textContent = `${lengthSlider.value} caracteres`;
-});
-
-document.querySelectorAll(".mode").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".mode").forEach(x => x.classList.remove("active"));
-    btn.classList.add("active");
-    mode = btn.dataset.mode;
-    generate();
-  });
-});
-
-document.querySelectorAll(".context").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".context").forEach(x => x.classList.remove("active"));
-    btn.classList.add("active");
-    context = btn.dataset.context;
-    updateRecommendation();
-  });
-});
-
-generateBtn.addEventListener("click", generate);
-refreshBtn.addEventListener("click", generate);
-copyBtn.addEventListener("click", () => copyText(output.value));
-
-$("clearHistory").addEventListener("click", () => {
-  history = [];
-  renderHistory();
-  showToast("Histórico da sessão apagado.");
-});
-
-document.querySelectorAll(".check-row input").forEach(input => {
-  input.addEventListener("change", generate);
-});
-
-updateRecommendation();
-generate();
